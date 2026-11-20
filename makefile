@@ -2,32 +2,32 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O2 -std=c11 -g
 LDFLAGS = -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
-# 递归查找根目录和所有子目录下的 .c 文件
-SRCS := $(shell find . -name '*.c' -type f)
+BUILD := build
 
-# 每个 .c 对应的可执行文件：去掉路径和 .c 后缀，放在根目录
-# 例如 ./games/tetris.c -> tetris
-TARGETS := $(notdir $(SRCS:.c=))
+# 递归查找所有 .c
+SRCS := $(shell find . -name '*.c' -type f -not -path './$(BUILD)/*')
 
-# 默认编译所有
+# 每个 .c 对应的可执行文件：build/去掉路径和.c后缀的名字
+# 例如 ./tetris/tetrix.c -> build/tetrix
+TARGETS := $(addprefix $(BUILD)/,$(notdir $(SRCS:.c=)))
+
 all: $(TARGETS)
 
-# 通用规则：任意目标都从同名 .c 编译
-# 用 vpath 让 make 能找到子目录里的源文件
+# 让 make 能在子目录里找到源文件
 vpath %.c $(sort $(dir $(SRCS)))
 
-%: %.c
+# 任意 build/xxx 都从同名 xxx.c 编译，且依赖 build 目录存在
+$(BUILD)/%: %.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
 
+$(BUILD):
+	mkdir -p $(BUILD)
+
 clean:
-	rm -f $(TARGETS)
+	rm -rf $(BUILD)
 
-.PHONY: all clean run run-test
+.PHONY: all clean run
 
-# 运行指定程序，例如：make run TARGET=tetris
-TARGET ?= game
-run: $(TARGET)
-	LIBGL_ALWAYS_SOFTWARE=1 ./$(TARGET)
-
-run-test: test
-	LIBGL_ALWAYS_SOFTWARE=1 ./test
+TARGET ?= tetrix
+run: $(BUILD)/$(TARGET)
+	LIBGL_ALWAYS_SOFTWARE=1 ./$(BUILD)/$(TARGET)
